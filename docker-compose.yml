@@ -1,0 +1,45 @@
+version: '3.8'
+
+services:
+  api-rag:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: concesa-api-rag
+    ports:
+      - "8001:8000"
+    environment:
+      # Variables de entorno (puedes sobreescribirlas en .env)
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - PDF_PATH=${PDF_PATH:-Catalogo_Equipos_Construccion.pdf}
+      - VECTORSTORE_DIR=${VECTORSTORE_DIR:-vectorstore_db}
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-text-embedding-3-small}
+      - CHUNK_SIZE=${CHUNK_SIZE:-500}
+      - CHUNK_OVERLAP=${CHUNK_OVERLAP:-100}
+      - TOP_K_DOCUMENTS=${TOP_K_DOCUMENTS:-3}
+      - CRM_DB_PATH=${CRM_DB_PATH:-crm_concesa_api.db}
+      - PERFIL_ACTIVO=${PERFIL_ACTIVO:-balanceado}
+    volumes:
+      # Persistencia de base de datos SQLite
+      - ./data:/app/data
+      # Persistencia del vectorstore (opcional, se puede regenerar)
+      - ./vectorstore_db:/app/vectorstore_db
+    env_file:
+      - .env
+    restart: unless-stopped
+    networks:
+      - rag-network
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  rag-network:
+    driver: bridge
+
+volumes:
+  data:
+  vectorstore_db:
